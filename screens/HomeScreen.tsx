@@ -64,8 +64,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.iconCircle}>
             <MaterialCommunityIcons name="shield-check" size={44} color="#4285F4" />
           </View>
-          <Text style={styles.title}>Fake News Detector</Text>
-          <Text style={styles.subtitle}>AI-Powered Fact Checking Engine</Text>
+          <Text style={styles.title}>AI Security Shield</Text>
+          <Text style={styles.subtitle}>Fake News • Email Phishing • SMS Traps</Text>
           <View style={styles.learningBadge}>
             <MaterialCommunityIcons name="brain" size={12} color="#2ED573" />
             <Text style={styles.learningText}>Adaptive Learning Active</Text>
@@ -83,7 +83,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <TextInput
             style={styles.input}
             multiline
-            placeholder="Search headline or link..."
+            placeholder="Paste News, Email, or SMS message here..."
             placeholderTextColor="#A4B0BE"
             value={message}
             onChangeText={(t) => {
@@ -118,8 +118,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <ActivityIndicator color="white" />
           ) : (
             <>
-              <Text style={styles.buttonText}>Analyze News</Text>
-              <MaterialCommunityIcons name="magnify-expand" size={24} color="white" />
+              <Text style={styles.buttonText}>Scan for Threats</Text>
+              <MaterialCommunityIcons name="shield-search" size={24} color="white" />
             </>
           )}
         </TouchableOpacity>

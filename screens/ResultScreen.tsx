@@ -32,16 +32,18 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
     Linking.openURL(url).catch(() => Alert.alert("Error", "Could not open browser"));
   };
 
+  const color = result.riskScore >= 70 ? '#FF4757' : result.riskScore >= 40 ? '#FFA502' : '#2ED573';
+
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: color + '05' }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#F7F8FA" />
       <GridBackground />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         
         {/* Verification Status */}
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { borderTopWidth: 8, borderTopColor: color }]}>
           <View style={styles.statusHeader}>
-             <Text style={styles.statusLabel}>COMPLETE AI REPORT</Text>
+             <Text style={styles.statusLabel}>INTELLIGENCE SCAN</Text>
              <RiskBadge score={result.riskScore} />
           </View>
           
@@ -54,10 +56,10 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
         </View>
 
         {/* Detailed Verdict Card (THE AI EXPLANATION) */}
-        <View style={styles.verdictCard}>
+        <View style={[styles.verdictCard, { borderLeftColor: color }]}>
           <View style={styles.verdictHeader}>
-            <MaterialCommunityIcons name="robot-confused-outline" size={24} color="#4285F4" />
-            <Text style={styles.verdictTitle}>AI Critical Analysis</Text>
+            <MaterialCommunityIcons name="security-network" size={24} color={color} />
+            <Text style={[styles.verdictTitle, { color }]}>Threat Level Analysis</Text>
           </View>
           <Text style={styles.verdictText}>{result.detailedVerdict}</Text>
         </View>
