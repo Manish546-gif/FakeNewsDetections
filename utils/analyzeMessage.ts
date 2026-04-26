@@ -17,14 +17,16 @@ const PHISHING_LURES = [
   { pattern: /(account|login|verify|update|blocked|suspended|security)/gi, weight: 15 },
   { pattern: /(official|bank|support|admin|security-team)/gi, weight: 10 },
   { pattern: /(action required|immediately|within 24 hours|final notice)/gi, weight: 20 },
-  { pattern: /(click here|validate|sign in below)/gi, weight: 15 }
+  { pattern: /(click here|validate|sign in below|next of kin|dormant account)/gi, weight: 25 },
+  { pattern: /(late president|financial dispute|swiss bank|frozen account)/gi, weight: 30 }
 ];
 
 const TRAP_PATTERNS = [
-  { pattern: /(won|winner|lottery|prize|reward|gift card|unclaimed)/gi, weight: 30 },
+  { pattern: /(won|winner|lottery|prize|reward|gift card|unclaimed|comp to win)/gi, weight: 30 },
   { pattern: /(amazon package|fedex|unpaid shipping|delivery failed)/gi, weight: 25 },
   { pattern: /(verification code|otp|don't share|someone logged into)/gi, weight: 25 },
-  { pattern: /(bitcoin|crypto|investment|easy profit|double your)/gi, weight: 30 }
+  { pattern: /(bitcoin|crypto|investment|easy profit|double your|royalties)/gi, weight: 30 },
+  { pattern: /(std txt rate|claim code|txt to \d{5}|\d+)/gi, weight: 35 }
 ];
 
 const SUSPICIOUS_URL_TRAITS = [
