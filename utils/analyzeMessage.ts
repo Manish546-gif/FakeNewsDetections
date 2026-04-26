@@ -1,108 +1,225 @@
 import { AnalysisResult } from '../types';
 
 /**
- * Total Security & Truth Engine (V7 - Multi-Vector)
- * -----------------------------------------------
- * Detects News, Phishing Emails, SMS Scams, and Deceptive Traps.
+ * Total Security & Truth Engine (V8 - Universal Scan)
+ * ---------------------------------------------------
+ * ALL patterns are scanned on EVERY message.
+ * Classification is used only for labeling the report.
  */
 
-const THREAT_TYPES = {
-  NEWS: 'News Analysis',
-  PHISHING: 'Phishing Attempt',
-  TRAP: 'SMS/Chat Scam',
-  LEGIT: 'Likely Authentic'
-};
-
-const PHISHING_LURES = [
-  { pattern: /(account|login|verify|update|blocked|suspended|security)/gi, weight: 15 },
-  { pattern: /(official|bank|support|admin|security-team)/gi, weight: 10 },
-  { pattern: /(action required|immediately|within 24 hours|final notice)/gi, weight: 20 },
-  { pattern: /(click here|validate|sign in below|next of kin|dormant account)/gi, weight: 25 },
-  { pattern: /(late president|financial dispute|swiss bank|frozen account)/gi, weight: 30 }
-];
-
-const TRAP_PATTERNS = [
-  { pattern: /(won|winner|lottery|prize|reward|gift card|unclaimed|comp to win)/gi, weight: 30 },
-  { pattern: /(amazon package|fedex|unpaid shipping|delivery failed)/gi, weight: 25 },
-  { pattern: /(verification code|otp|don't share|someone logged into)/gi, weight: 25 },
-  { pattern: /(bitcoin|crypto|investment|easy profit|double your|royalties)/gi, weight: 30 },
-  { pattern: /(std txt rate|claim code|txt to \d{5}|\d+)/gi, weight: 35 }
-];
-
-const SUSPICIOUS_URL_TRAITS = [
-  { pattern: /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/, label: 'Direct IP Link', weight: 40 },
-  { pattern: /(@)/, label: 'Masked URL Pattern', weight: 30 },
-  { pattern: /(\.zip|\.apk|\.exe|\.rar)$/i, label: 'Executable Content', weight: 50 },
-  { pattern: /(googIe|faceb0ok|paypa1|micros0ft)/i, label: 'Typosquatting Attempt', weight: 45 }
-];
-
-export function analyzeMessage(message: string): AnalysisResult {
+// ─── Classifier ────────────────────────────────────────
+function classifyMessage(message: string): string {
   const lower = message.toLowerCase();
+  const isEmail =
+    lower.includes('subject:') ||
+    lower.includes('dear sir') ||
+    lower.includes('dear madam') ||
+    lower.includes('sincerely') ||
+    lower.includes('next of kin') ||
+    lower.includes('@') && lower.includes('bank');
+  const isSMS =
+    message.length < 300 &&
+    (lower.includes('free msg') ||
+      lower.includes('txt') ||
+      lower.includes('std rate') ||
+      lower.includes('opt out') ||
+      lower.includes('reply stop'));
+  if (isEmail) return 'Phishing Email';
+  if (isSMS) return 'SMS Scam';
+  return 'News / Message';
+}
+
+// ─── Red Flag Definitions ───────────────────────────────
+const RED_FLAGS = [
+  // --- Fake News Markers ---
+  {
+    label: 'Sensationalist Language',
+    pattern: /(SHOCKING|EXPOSED|UNBELIEVABLE|YOU WON'T BELIEVE|MUST SEE|BREAKING|BOMBSHELL)/gi,
+    weight: 20,
+    msg: 'Uses emotionally charged clickbait words designed to bypass critical thinking.',
+    category: 'Fake News',
+  },
+  {
+    label: 'Vague Source Attribution',
+    pattern: /(officials say|sources claim|people are saying|experts believe|insiders reveal)/gi,
+    weight: 18,
+    msg: 'Makes claims without citing specific, verifiable sources or institutions.',
+    category: 'Fake News',
+  },
+  {
+    label: 'Urgency / Fear Bias',
+    pattern: /(act now|share before deleted|limited time|they don't want you to know|censored|banned)/gi,
+    weight: 22,
+    msg: 'Creates a false sense of urgency or censorship to pressure immediate action.',
+    category: 'Fake News',
+  },
+  {
+    label: 'Aggressive Capitalization',
+    pattern: /\b([A-Z]{5,})\b/g,
+    weight: 12,
+    msg: '"Shouting" text is a common tactic in low-credibility misinformation.',
+    category: 'Fake News',
+  },
+
+  // --- Email Phishing Markers ---
+  {
+    label: 'Account Threat Lure',
+    pattern: /(your account (has been|will be) (blocked|suspended|terminated|frozen)|verify your account|confirm your identity)/gi,
+    weight: 28,
+    msg: 'Classic credential theft trigger — real services never demand this over email.',
+    category: 'Phishing',
+  },
+  {
+    label: 'Urgency Deadline',
+    pattern: /(within 24 hours|action required|final notice|immediately or|your access will)/gi,
+    weight: 25,
+    msg: 'Artificial deadline pressure is the #1 phishing manipulation tactic.',
+    category: 'Phishing',
+  },
+  {
+    label: 'Inheritance / Fund Transfer Scam',
+    pattern: /(next of kin|dormant account|late president|unclaimed funds|transfer.*million|beneficiary|swiss bank|bank of africa)/gi,
+    weight: 40,
+    msg: 'Classic "Nigerian Prince" inheritance fraud pattern from fraud_email dataset.',
+    category: 'Phishing',
+  },
+  {
+    label: 'Suspicious Confidentiality Request',
+    pattern: /(treat.*secrecy|confidential.*assistance|utmost confidence|do not disclose)/gi,
+    weight: 30,
+    msg: 'Fraudsters ask for secrecy to prevent victims from seeking advice.',
+    category: 'Phishing',
+  },
+  {
+    label: 'Personal Data Harvesting',
+    pattern: /(your full name|your bank account|your mobile number|send.*details|forward.*information)/gi,
+    weight: 32,
+    msg: 'Directly soliciting personal data — a hallmark of identity theft operations.',
+    category: 'Phishing',
+  },
+
+  // --- SMS / Trap Markers ---
+  {
+    label: 'Prize / Lottery Trap',
+    pattern: /(you have (won|been selected)|claim your prize|prize reward|lottery winner|gift card|chosen.*winner)/gi,
+    weight: 35,
+    msg: 'Fake prize alerts from spam.csv — designed to steal info or premium SMS charges.',
+    category: 'Trap',
+  },
+  {
+    label: 'SMS Shortcode Exploitation',
+    pattern: /(txt.*to \d{4,6}|text.*\d{4,6}|std (txt|sms) rate|call \d{10,}|claim code)/gi,
+    weight: 30,
+    msg: 'Shortcode exploitation harvests premium SMS charges from unsuspecting victims.',
+    category: 'Trap',
+  },
+  {
+    label: 'Delivery / Package Scam',
+    pattern: /(your (package|parcel|delivery) (is|has)|fedex|dhl|failed delivery|reschedule.*delivery)/gi,
+    weight: 28,
+    msg: 'Fake delivery notifications phish for address, credit card, and login data.',
+    category: 'Trap',
+  },
+  {
+    label: 'Investment / Crypto Scam',
+    pattern: /(guaranteed (profit|return)|double your (money|investment)|easy (profit|money)|bitcoin.*earn|passive income.*crypto)/gi,
+    weight: 35,
+    msg: 'Investment fraud pattern — no legitimate investment guarantees returns.',
+    category: 'Trap',
+  },
+
+  // --- URL / Link Safety ---
+  {
+    label: 'Direct IP Address Link',
+    pattern: /https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/gi,
+    weight: 45,
+    msg: 'Legitimate websites use domain names, not raw IP addresses.',
+    category: 'URL Threat',
+  },
+  {
+    label: 'Typosquatting Domain',
+    pattern: /(googIe\.|faceb0ok\.|paypa1\.|arnazon\.|micros0ft\.)/gi,
+    weight: 50,
+    msg: 'Domain mimics a trusted brand with subtle letter substitutions.',
+    category: 'URL Threat',
+  },
+  {
+    label: 'Executable / Malicious File Link',
+    pattern: /https?:\/\/\S+\.(apk|exe|zip|rar|bat|scr)/gi,
+    weight: 50,
+    msg: 'Link points to an executable file — extremely high malware risk.',
+    category: 'URL Threat',
+  },
+];
+
+// ─── Trust Score Reducers ───────────────────────────────
+const TRUST_REDUCERS = [
+  { pattern: /(reuters|associated press|bbc\.com|ap news|ndtv\.com)/gi, weight: -25 },
+  { pattern: /(according to the official statement|government press release)/gi, weight: -20 },
+];
+
+// ─── Main Analyzer ──────────────────────────────────────
+export function analyzeMessage(message: string): AnalysisResult {
   const urls = message.match(/(https?:\/\/[^\s]+)/gi) || [];
-  
   let score = 0;
-  let issues: string[] = [];
-  let triggers: string[] = [];
-  let detectedType = THREAT_TYPES.NEWS;
+  const foundIssues: string[] = [];
+  const foundTriggers: string[] = [];
 
-  // 1. Classification
-  const isEmail = lower.includes('subject:') || lower.includes('dear') || lower.includes('sincerely');
-  const isSMS = message.length < 200 && (lower.includes('reply') || lower.includes('opt out') || lower.includes('msg'));
-
-  if (isEmail) detectedType = THREAT_TYPES.PHISHING;
-  else if (isSMS) detectedType = THREAT_TYPES.TRAP;
-
-  // 2. Vector Analysis
-  if (detectedType === THREAT_TYPES.PHISHING) {
-    PHISHING_LURES.forEach(l => {
-      if (message.match(l.pattern)) score += l.weight;
-    });
-    issues.push('Linguistic pattern matches credential theft lures.');
-  } else if (detectedType === THREAT_TYPES.TRAP) {
-    TRAP_PATTERNS.forEach(t => {
-      if (message.match(t.pattern)) score += t.weight;
-    });
-    issues.push('Highly suspicious "Prize/Urgency" trap detected.');
-  }
-
-  // 3. Global URL Security Check
-  urls.forEach(url => {
-    SUSPICIOUS_URL_TRAITS.forEach(trait => {
-      if (url.match(trait.pattern)) {
-        score += trait.weight;
-        triggers.push(trait.label);
-      }
-    });
+  // Scan ALL red flags on every message
+  RED_FLAGS.forEach(flag => {
+    if (flag.pattern.test(message)) {
+      score += flag.weight;
+      foundTriggers.push(`[${flag.category}] ${flag.label}`);
+      foundIssues.push(flag.msg);
+    }
+    flag.pattern.lastIndex = 0; // reset stateful regex
   });
 
-  // 4. Default News Risk (Heuristics from previous version)
-  if (lower.includes('shocking') || lower.includes('exposed')) score += 20;
+  // Apply trust reducers
+  TRUST_REDUCERS.forEach(r => {
+    if (r.pattern.test(message)) score += r.weight;
+    r.pattern.lastIndex = 0;
+  });
 
-  const riskScore = Math.min(score, 100);
+  const riskScore = Math.max(0, Math.min(Math.round(score), 100));
+  const detectedType = classifyMessage(message);
 
-  // 5. Build Advanced Verdict
-  let detailedVerdict = "";
-  if (riskScore > 70) {
-    detailedVerdict = `CRITICAL THREAT: This ${detectedType} is a high-confidence trap. We detected ${triggers.join(', ') || 'patterned deceptive language'}. Interacting with this content could lead to credential theft or malware infection. DELETE IMMEDIATELY.`;
-  } else if (riskScore > 30) {
-    detailedVerdict = `SUSPICIOUS CONTENT: This ${detectedType} uses aggressive psychological tactics. The links and phrasing are inconsistent with official communications. Proceed with extreme caution and do not provide any personal data.`;
+  // Build a unique, descriptive verdict
+  let detailedVerdict = '';
+  const topFlags = foundTriggers.slice(0, 3).join(', ');
+
+  if (riskScore >= 70) {
+    detailedVerdict = `⚠️ HIGH RISK DETECTED: This ${detectedType} matches ${foundTriggers.length} known threat pattern${foundTriggers.length !== 1 ? 's' : ''}. Key triggers: ${topFlags || 'multiple deceptive signals'}. This content exhibits strong characteristics of a deliberate deception campaign. DO NOT interact, click links, or share personal information.`;
+  } else if (riskScore >= 35) {
+    detailedVerdict = `⚡ SUSPICIOUS CONTENT: This ${detectedType} shows ${foundTriggers.length} warning sign${foundTriggers.length !== 1 ? 's' : ''} including ${topFlags || 'ambiguous phrasing'}. While not definitively fraudulent, the patterns used are inconsistent with trustworthy communication. Verify with an independent source before taking any action.`;
+  } else if (riskScore > 0) {
+    detailedVerdict = `🔍 MINOR SIGNALS: This ${detectedType} contains ${foundTriggers.length} low-weight indicator${foundTriggers.length !== 1 ? 's' : ''}. Overall profile is low-risk but exercise normal caution — especially if this message was unexpected.`;
   } else {
-    detailedVerdict = `SAFE PROFILE: Analysis confirms this ${detectedType} follows standard, non-deceptive communication patterns. No phishing lures or malicious traps were identified.`;
+    detailedVerdict = `✅ CLEAN PROFILE: No known misinformation, phishing, or scam markers were detected in this ${detectedType}. The linguistic structure is consistent with authentic, non-deceptive communication.`;
   }
 
   return {
     riskScore,
-    issues: issues.length > 0 ? issues : ['No structural anomalies detected.'],
-    triggers: triggers.length > 0 ? triggers : ['Neutral Phrasing'],
-    sentiment: riskScore > 50 ? 'Deceptive' : 'Safe',
-    credibility: riskScore > 60 ? 'low' : 'high',
+    issues: foundIssues.length > 0 ? foundIssues : ['No known threat patterns detected.'],
+    triggers: foundTriggers.length > 0 ? foundTriggers : ['No flags raised'],
+    sentiment: riskScore > 50 ? 'Deceptive' : riskScore > 20 ? 'Suspicious' : 'Neutral',
+    credibility: riskScore > 60 ? 'low' : riskScore > 30 ? 'medium' : 'high',
     suggestions: [
-      riskScore > 50 ? 'DO NOT CLICK ANY LINKS.' : 'Standard message profile.',
-      'Check the actual sender address, not just the name.',
-      'If it asks for money or login, it is likely a scam.'
+      riskScore > 50
+        ? 'Do NOT click any links or provide personal info.'
+        : 'Exercise standard caution — verify unexpected claims.',
+      'Check if a recognized outlet or official source has reported this.',
+      'If asking for money or credentials, treat as fraudulent.',
     ],
-    summary: riskScore > 75 ? 'DANGEROUS TRAP' : riskScore > 40 ? 'SUSPICIOUS' : 'SECURE CONTENT',
+    summary:
+      riskScore >= 70
+        ? 'DANGEROUS — HIGH RISK'
+        : riskScore >= 35
+        ? 'SUSPICIOUS CONTENT'
+        : riskScore > 0
+        ? 'LOW RISK'
+        : 'SECURE CONTENT',
     urls,
-    detailedVerdict
+    detailedVerdict,
   };
 }
