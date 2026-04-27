@@ -49,73 +49,73 @@ const HIGH_SPECIFICITY: Pattern[] = [
   {
     regex: /next of kin|dormant account|unclaimed funds|swiss bank account/i,
     label: 'Inheritance Fraud Phrase',
-    points: 40,
+    points: 60,
     description: 'Classic "Nigerian Prince" inheritance scam language from fraud_email dataset.',
   },
   {
     regex: /financial (dispute|predicament|crisis) .{0,40}(contact|assist|transfer)/i,
     label: 'Fund Transfer Solicitation',
-    points: 38,
+    points: 55,
     description: 'Requests financial cooperation using a fabricated crisis — a fraud hallmark.',
   },
   {
     regex: /(std|standard) (txt|sms) rate|\d{5} to (win|claim|enter)/i,
     label: 'Premium SMS Exploitation',
-    points: 35,
+    points: 55,
     description: 'Shortcode pattern from spam.csv used to charge victims via hidden SMS fees.',
   },
   {
     regex: /you (have been selected|are the (lucky|chosen)|won.*prize)/i,
     label: 'Fake Prize Announcement',
-    points: 38,
+    points: 58,
     description: 'Lottery/winner scam trigger — no legitimate competition contacts you unsolicited.',
   },
   {
     regex: /(account (will be|is being|has been) (blocked|suspended|terminated|frozen))/i,
     label: 'Account Suspension Threat',
-    points: 36,
+    points: 55,
     description: 'Phishing tactic — real services never threaten suspension via unsolicited messages.',
   },
   {
     regex: /verify your (identity|account|details|credentials) (immediately|now|urgently)/i,
     label: 'Credential Harvesting Demand',
-    points: 38,
+    points: 58,
     description: 'Credential theft request with artificial urgency — a top phishing pattern.',
   },
   {
     regex: /https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/i,
     label: 'Direct IP Address Link',
-    points: 45,
+    points: 65,
     description: 'Legitimate websites use domain names. IP-based URLs are a strong malware indicator.',
   },
   {
     regex: /(googl?e|faceb|amazon|paypal|micros?oft)[^a-zA-Z][^\s]*\.(tk|ml|ga|cf|gq|xyz|top|club|click|work)/i,
     label: 'Brand Impersonation with Suspicious TLD',
-    points: 48,
+    points: 60,
     description: 'A trusted brand name paired with a high-risk free/disposable top-level domain.',
   },
   {
     regex: /https?:\/\/[^\s]*\.(apk|exe|scr|bat|cmd|vbs|jar)\b/i,
     label: 'Malware File Link',
-    points: 50,
+    points: 70,
     description: 'Link points directly to an executable file — extreme malware risk.',
   },
   {
     regex: /(double|multiply|triple) your (money|investment|bitcoin|crypto)/i,
     label: 'Investment Fraud Promise',
-    points: 40,
+    points: 60,
     description: 'Guaranteed return promises are categorically fraudulent — no exception.',
   },
   {
     regex: /share (this|before it'?s? deleted|before removal|before (they|government) (ban|remove|delete))/i,
     label: 'Engineered Virality Trigger',
-    points: 35,
+    points: 45,
     description: 'Instructs sharing before fake "censorship" — designed to spread misinformation.',
   },
   {
     regex: /they (don.t|do not|won.t) want you to (know|see|hear|find out)/i,
     label: 'Conspiracy Framing',
-    points: 32,
+    points: 45,
     description: 'Manufactured insider narrative designed to create distrust of authoritative sources.',
   },
 ];
@@ -204,31 +204,31 @@ function analyzeStructure(msg: string): number {
   // ALL CAPS ratio — legitimate writing rarely exceeds 10%
   const capsWords = words.filter(w => /^[A-Z]{3,}$/.test(w)).length;
   const capsRatio = capsWords / totalWords;
-  if (capsRatio > 0.3) structureScore += 20;
-  else if (capsRatio > 0.15) structureScore += 12;
-  else if (capsRatio > 0.05) structureScore += 5;
+  if (capsRatio > 0.4) structureScore += 25;
+  else if (capsRatio > 0.25) structureScore += 15;
+  else if (capsRatio > 0.1) structureScore += 5;
 
-  // Exclamation density
+  // Exclamation density — higher threshold to avoid penalizing standard news
   const exclamations = (msg.match(/!/g) || []).length;
   const exclamRatio = exclamations / totalWords;
-  if (exclamRatio > 0.1) structureScore += 15;
-  else if (exclamRatio > 0.05) structureScore += 8;
+  if (exclamRatio > 0.15) structureScore += 20;
+  else if (exclamRatio > 0.08) structureScore += 10;
 
   // URL count relative to message length
   const urls = (msg.match(/https?:\/\//gi) || []).length;
-  if (urls > 2) structureScore += 12;
-  else if (urls === 1) structureScore += 3;
+  if (urls > 3) structureScore += 15;
+  else if (urls > 1) structureScore += 5;
 
   // Currency + number combinations (transfer amount patterns)
   const currencyPattern = /\$[\d,]+|\d+[\s]*(million|thousand|billion)/gi;
   const currencyMatches = (msg.match(currencyPattern) || []).length;
-  if (currencyMatches >= 2) structureScore += 15;
+  if (currencyMatches >= 2) structureScore += 20;
 
   // Broken/formal English patterns seen in fraud dataset
   const brokenEnglish = /(i am the son of|i presume you are aware|kindly revert|do the needful|remit the sum)/i;
-  if (brokenEnglish.test(msg)) structureScore += 20;
+  if (brokenEnglish.test(msg)) structureScore += 30;
 
-  return Math.min(structureScore, 40); // cap structural contribution at 40
+  return Math.min(structureScore, 50); // cap structural contribution at 50
 }
 
 // ─── 4. Main Engine ────────────────────────────────────────────────────────────
@@ -311,11 +311,14 @@ export function analyzeMessage(message: string): AnalysisResult {
   }
 
   // ── Calibrate to 0–100 scale ──
-  // rawScore max theoretical ~200+ → map via sigmoid-inspired curve
-  // Scores < 20 → display as low risk
-  // Scores 20–60 → moderate risk zone
-  // Scores > 80 → high risk
-  const calibrated = Math.round(Math.max(0, Math.min((rawScore / 1.6), 100)));
+  // Modified calibration: Lower the floor, sharpen the curve
+  // subtract a baseline threshold (12) to ensure clean news hits 0%
+  let calibrated = Math.round(Math.max(0, Math.min(((rawScore - 12) / 1.4), 100)));
+  
+  // Force clean score if no triggers matched and structural was low
+  if (foundTriggers.length === 0 && rawScore < 15) {
+    calibrated = 0;
+  }
 
   // ── Build unique verdict ──
   const topFlags = foundTriggers.slice(0, 3).join(', ');

@@ -1,42 +1,34 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Svg, { Defs, Pattern, Path, Rect } from 'react-native-svg';
 
-const { width, height } = Dimensions.get('window');
+interface GridBackgroundProps {
+  color?: string;
+}
 
-const GridBackground: React.FC = () => {
+const GridBackground: React.FC<GridBackgroundProps> = ({ color = '#4285F410' }) => {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={styles.grid}>
-        {Array.from({ length: 20 }).map((_, i) => (
-          <View key={`v-${i}`} style={[styles.vLine, { left: (width / 10) * i }]} />
-        ))}
-        {Array.from({ length: 40 }).map((_, i) => (
-          <View key={`h-${i}`} style={[styles.hLine, { top: (height / 20) * i }]} />
-        ))}
-      </View>
+      <Svg height="100%" width="100%">
+        <Defs>
+          <Pattern
+            id="grid"
+            width="40"
+            height="40"
+            patternUnits="userSpaceOnUse"
+          >
+            <Path
+              d="M 40 0 L 0 0 0 40"
+              fill="none"
+              stroke={color}
+              strokeWidth="1"
+            />
+          </Pattern>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#grid)" />
+      </Svg>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  grid: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.03,
-  },
-  vLine: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: '#000',
-  },
-  hLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#000',
-  },
-});
 
 export default GridBackground;

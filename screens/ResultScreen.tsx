@@ -16,6 +16,7 @@ import RiskBadge from '../components/RiskBadge';
 import AnalysisReportBar from '../components/AnalysisReportBar';
 import GridBackground from '../components/GridBackground';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from '../context/ThemeContext';
 
 type ResultScreenProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Result'>;
@@ -32,18 +33,19 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
     Linking.openURL(url).catch(() => Alert.alert("Error", "Could not open browser"));
   };
 
-  const color = result.riskScore >= 70 ? '#FF4757' : result.riskScore >= 40 ? '#FFA502' : '#2ED573';
+  const { colors, isDark } = useTheme();
+  const color = result.riskScore >= 70 ? colors.riskHigh : result.riskScore >= 40 ? colors.riskMed : colors.riskLow;
 
   return (
-    <View style={[styles.root, { backgroundColor: color + '05' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F8FA" />
-      <GridBackground />
+    <View style={[styles.root, { backgroundColor: isDark ? colors.background : colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+      <GridBackground color={isDark ? '#33415520' : '#4285F410'} />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         
         {/* Verification Status */}
-        <View style={[styles.statusCard, { borderTopWidth: 8, borderTopColor: color }]}>
+        <View style={[styles.statusCard, { backgroundColor: colors.card, borderTopColor: color, borderTopWidth: 8 }]}>
           <View style={styles.statusHeader}>
-             <Text style={styles.statusLabel}>INTELLIGENCE SCAN</Text>
+             <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>INTELLIGENCE SCAN</Text>
              <RiskBadge score={result.riskScore} />
           </View>
           
@@ -56,12 +58,12 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
         </View>
 
         {/* Detailed Verdict Card (THE AI EXPLANATION) */}
-        <View style={[styles.verdictCard, { borderLeftColor: color }]}>
+        <View style={[styles.verdictCard, { backgroundColor: colors.card, borderLeftColor: color }]}>
           <View style={styles.verdictHeader}>
             <MaterialCommunityIcons name="security-network" size={24} color={color} />
             <Text style={[styles.verdictTitle, { color }]}>Threat Level Analysis</Text>
           </View>
-          <Text style={styles.verdictText}>{result.detailedVerdict}</Text>
+          <Text style={[styles.verdictText, { color: colors.text }]}>{result.detailedVerdict}</Text>
         </View>
 
         {/* LIVE NEWS CROSS-REFERENCE */}
@@ -74,7 +76,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
             {result.newsCheck.articles.slice(0, 3).map((article, i) => (
               <TouchableOpacity 
                 key={i} 
-                style={styles.newsCard} 
+                style={[styles.newsCard, { backgroundColor: colors.card, borderColor: colors.border }]} 
                 onPress={() => Linking.openURL(article.link)}
               >
                 <View style={styles.newsHeader}>
@@ -96,7 +98,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
                <Text style={styles.sectionTitle}>Professional Fact Checks</Text>
             </View>
             {result.factChecks.map((fc, i) => (
-              <View key={i} style={styles.factCard}>
+              <View key={i} style={[styles.factCard, { backgroundColor: colors.card, borderLeftColor: fc.textualRating.toLowerCase().includes('false') ? colors.riskHigh : colors.riskLow }]}>
                 <View style={styles.factRatingRow}>
                   <Text style={[styles.factRating, { color: fc.textualRating.toLowerCase().includes('false') ? '#FF4757' : '#2ED573' }]}>
                     {fc.textualRating.toUpperCase()}
@@ -148,9 +150,9 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
                <MaterialCommunityIcons name="wikipedia" size={24} color="#2F3542" />
                <Text style={styles.sectionTitle}>Contextual Verification</Text>
             </View>
-            <View style={styles.wikiCard}>
-              <Text style={styles.wikiTitle}>{result.wikiResult.title}</Text>
-              <Text style={styles.wikiExtract} numberOfLines={3}>{result.wikiResult.extract}</Text>
+            <View style={[styles.wikiCard, { backgroundColor: isDark ? '#1E293B' : '#F8F9FA', borderColor: colors.border }]}>
+              <Text style={[styles.wikiTitle, { color: colors.text }]}>{result.wikiResult.title}</Text>
+              <Text style={[styles.wikiExtract, { color: colors.textSecondary }]} numberOfLines={3}>{result.wikiResult.extract}</Text>
               <TouchableOpacity onPress={() => Linking.openURL(result.wikiResult.url)}>
                 <Text style={styles.wikiLink}>View Wikipedia Record</Text>
               </TouchableOpacity>
@@ -230,22 +232,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    borderWidth: 1,
     borderColor: '#E8EDF3',
   },
-  statusHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  statusLabel: { fontSize: 10, fontWeight: '900', color: '#A4B0BE', letterSpacing: 2 },
+  statusHeader: { flexDirection: 'column', alignItems: 'center', marginBottom: 20, gap: 10 },
+  statusLabel: { fontSize: 10, fontWeight: '900', color: '#A4B0BE', letterSpacing: 2, marginBottom: 4 },
   summaryBox: { marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#F1F2F6' },
   summaryTitle: { fontSize: 18, fontWeight: '900', color: '#2F3542' },
   summaryDesc: { fontSize: 12, color: '#747D8C', marginTop: 4, fontWeight: '600' },
-  verdictCard: { backgroundColor: 'white', borderRadius: 20, padding: 22, marginBottom: 20, borderLeftWidth: 8, borderLeftColor: '#4285F4', elevation: 3 },
+  verdictCard: { borderRadius: 20, padding: 22, marginBottom: 20, borderLeftWidth: 8, elevation: 3 },
   verdictHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   verdictTitle: { fontSize: 17, fontWeight: '900', color: '#2F3542' },
   verdictText: { fontSize: 14, color: '#57606F', lineHeight: 22, fontWeight: '600' },
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-  sectionTitle: { fontSize: 20, fontWeight: '900', color: '#2F3542' },
-  issueRow: { flexDirection: 'row', backgroundColor: 'white', padding: 16, borderRadius: 20, marginBottom: 12, gap: 12, borderWidth: 1, borderColor: '#E8EDF3' },
+  sectionTitle: { fontSize: 20, fontWeight: '900' },
+  issueRow: { flexDirection: 'row', padding: 16, borderRadius: 20, marginBottom: 12, gap: 12, borderWidth: 1 },
   flagIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FF475715', justifyContent: 'center', alignItems: 'center' },
   flagContent: { flex: 1 },
   flagLabel: { fontSize: 10, fontWeight: '900', color: '#FF4757', textTransform: 'uppercase', marginBottom: 2 },
@@ -253,12 +254,10 @@ const styles = StyleSheet.create({
   cleanRow: { backgroundColor: '#2ED57315', padding: 20, borderRadius: 20, alignItems: 'center', gap: 10 },
   cleanText: { fontSize: 14, color: '#2ED573', fontWeight: '800', textAlign: 'center' },
   newsCard: {
-    backgroundColor: 'white',
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E8EDF3',
     elevation: 2,
   },
   newsHeader: {
@@ -284,10 +283,9 @@ const styles = StyleSheet.create({
   },
   newsSnippet: {
     fontSize: 12,
-    color: '#747D8C',
     lineHeight: 18,
   },
-  factCard: { backgroundColor: 'white', borderRadius: 20, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: '#2ED573', elevation: 2 },
+  factCard: { borderRadius: 20, padding: 16, marginBottom: 12, borderLeftWidth: 4, elevation: 2 },
   factRatingRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   factRating: { fontSize: 11, fontWeight: '900' },
   factSource: { fontSize: 10, color: '#A4B0BE', fontWeight: '800' },

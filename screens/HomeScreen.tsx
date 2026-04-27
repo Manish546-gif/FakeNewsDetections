@@ -25,6 +25,7 @@ import {
 import { getHistory, saveToHistory, HistoryItem } from '../utils/history';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { useTheme } from '../context/ThemeContext';
 import { useIsFocused } from '@react-navigation/native';
 import GridBackground from '../components/GridBackground';
 
@@ -109,38 +110,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F8FA" />
-      <GridBackground />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <GridBackground color={isDark ? '#33415520' : '#4285F410'} />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        
         <View style={styles.header}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="shield-check" size={44} color="#4285F4" />
+            <MaterialCommunityIcons name="shield-check" size={44} color={colors.primary} />
           </View>
-          <Text style={styles.title}>AI Security Shield</Text>
-          <Text style={styles.subtitle}>Fake News • Email Phishing • SMS Traps</Text>
-          <View style={styles.learningBadge}>
-            <MaterialCommunityIcons name="brain" size={12} color="#2ED573" />
-            <Text style={styles.learningText}>Adaptive Learning Active</Text>
-          </View>
+          <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
+            <MaterialCommunityIcons 
+              name={isDark ? "weather-sunny" : "weather-night"} 
+              size={24} 
+              color={colors.text} 
+            />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.card}>
+        <Text style={[styles.title, { color: colors.text }]}>AI Security Shield</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Fake News • Email Phishing • SMS Traps</Text>
+        
+        <View style={styles.learningBadge}>
+          <MaterialCommunityIcons name="brain" size={12} color="#2ED573" />
+          <Text style={styles.learningText}>Adaptive Learning Active</Text>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <View style={styles.labelRow}>
-              <MaterialCommunityIcons name="text-box-search-outline" size={16} color="#4285F4" />
-              <Text style={styles.cardLabel}>NEWS CONTENT</Text>
+              <MaterialCommunityIcons name="text-box-search-outline" size={16} color={colors.primary} />
+              <Text style={[styles.cardLabel, { color: colors.primary }]}>NEWS CONTENT</Text>
             </View>
           </View>
           
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             multiline
             placeholder="Paste News, Email, or SMS message here..."
-            placeholderTextColor="#A4B0BE"
+            placeholderTextColor={isDark ? '#475569' : '#A4B0BE'}
             value={message}
             onChangeText={(t) => {
               setMessage(t);
@@ -149,13 +157,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           />
 
           <View style={styles.utilityRow}>
-            <TouchableOpacity style={styles.utilBtn} onPress={handlePaste}>
-              <MaterialCommunityIcons name="content-paste" size={18} color="#4285F4" />
-              <Text style={styles.utilBtnText}>PASTE</Text>
+            <TouchableOpacity style={[styles.utilBtn, { backgroundColor: isDark ? '#1e293b' : '#F1F2F6' }]} onPress={handlePaste}>
+              <MaterialCommunityIcons name="content-paste" size={18} color={colors.primary} />
+              <Text style={[styles.utilBtnText, { color: colors.primary }]}>PASTE</Text>
             </TouchableOpacity>
             
             {message.length > 0 && (
-              <TouchableOpacity style={styles.utilBtn} onPress={() => setMessage('')}>
+              <TouchableOpacity style={[styles.utilBtn, { backgroundColor: isDark ? '#1e293b' : '#F1F2F6' }]} onPress={() => setMessage('')}>
                 <MaterialCommunityIcons name="delete-sweep-outline" size={18} color="#FF4757" />
                 <Text style={[styles.utilBtnText, {color: '#FF4757'}]}>CLEAR</Text>
               </TouchableOpacity>
@@ -180,36 +188,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           )}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F7F8FA',
   },
   container: {
     padding: 20,
     paddingTop: 40,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 24,
+  header: { 
+    alignItems: 'center', 
+    marginBottom: 15, 
+    position: 'relative', 
+    width: '100%' 
   },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#4285F4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    marginBottom: 16,
+  themeToggle: { 
+    position: 'absolute', 
+    right: 0, 
+    top: 0, 
+    padding: 10, 
+    borderRadius: 12, 
+    backgroundColor: '#4285F410' 
+  },
+  iconCircle: { 
+    width: 90, 
+    height: 90, 
+    borderRadius: 45, 
+    backgroundColor: '#4285F410', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 5,
     borderWidth: 1,
     borderColor: '#E8EDF3',
   },

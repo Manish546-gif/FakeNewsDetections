@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { getHistory, HistoryItem } from '../utils/history';
+import { getHistory, HistoryItem, clearHistory } from '../utils/history';
 import GridBackground from '../components/GridBackground';
+import { useTheme } from '../context/ThemeContext';
+import { Alert } from 'react-native';
 
 const HistoryScreen = ({ navigation }: any) => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const isFocused = useIsFocused();
+  const { colors, isDark } = useTheme();
 
   useEffect(() => {
     if (isFocused) {
@@ -20,14 +23,39 @@ const HistoryScreen = ({ navigation }: any) => {
     setHistory(data.reverse()); // Newest first
   };
 
+  const handleClear = () => {
+    Alert.alert(
+      "Clear History",
+      "Are you sure you want to delete all scan logs?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete All", 
+          style: "destructive",
+          onPress: async () => {
+            await clearHistory();
+            loadHistory();
+          }
+        }
+      ]
+    );
+  };
+
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F8FA" />
-      <GridBackground />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+      <GridBackground color={isDark ? '#33415520' : '#4285F410'} />
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>All Analyses</Text>
-          <Text style={styles.subtitle}>Full history of scanned news patterns</Text>
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>Security Logs</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Chronological Threat History</Text>
+          </View>
+          {history.length > 0 && (
+            <TouchableOpacity style={[styles.clearBtn, { backgroundColor: isDark ? '#FF475720' : '#FF475710' }]} onPress={handleClear}>
+              <MaterialCommunityIcons name="delete-sweep" size={24} color="#FF4757" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {history.length === 0 ? (
@@ -39,18 +67,18 @@ const HistoryScreen = ({ navigation }: any) => {
           history.map((item) => (
             <TouchableOpacity 
               key={item.id} 
-              style={styles.historyItem}
+              style={[styles.historyItem, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Result', { result: item.result, message: item.message })}
             >
-              <View style={[styles.statusDot, { backgroundColor: item.result.riskScore > 60 ? '#FF4757' : '#2ED573' }]} />
+              <View style={[styles.statusDot, { backgroundColor: item.result.riskScore > 60 ? colors.riskHigh : colors.riskLow }]} />
               <View style={styles.historyTextContent}>
-                <Text style={styles.historyMsg} numberOfLines={1}>{item.message}</Text>
-                <Text style={styles.historyDate}>{new Date(item.timestamp).toLocaleString()}</Text>
+                <Text style={[styles.historyMsg, { color: colors.text }]} numberOfLines={1}>{item.message}</Text>
+                <Text style={[styles.historyDate, { color: colors.textSecondary }]}>{new Date(item.timestamp).toLocaleString()}</Text>
               </View>
-              <View style={styles.scoreBadge}>
-                 <Text style={styles.scoreText}>{item.result.riskScore}%</Text>
+              <View style={[styles.scoreBadge, { backgroundColor: isDark ? '#334155' : '#F1F2F6' }]}>
+                 <Text style={[styles.scoreText, { color: colors.text }]}>{item.result.riskScore}%</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#CED6E0" />
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           ))
         )}
@@ -60,11 +88,12 @@ const HistoryScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F7F8FA' },
+  root: { flex: 1 },
   container: { padding: 20, paddingTop: 40 },
-  header: { marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: '900', color: '#2F3542' },
-  subtitle: { fontSize: 14, color: '#747D8C', fontWeight: '600' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
+  title: { fontSize: 28, fontWeight: '900' },
+  subtitle: { fontSize: 13, fontWeight: '700' },
+  clearBtn: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { alignItems: 'center', marginTop: 100 },
   emptyText: { marginTop: 12, fontSize: 16, color: '#A4B0BE', fontWeight: '700' },
   historyItem: {

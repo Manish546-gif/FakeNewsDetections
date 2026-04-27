@@ -187,13 +187,17 @@ export async function checkCurrentNews(message: string): Promise<NewsCheckResult
     });
 
     // Score adjustment: credible sources reduce risk, low-credibility raise it
-    const scoreAdjustment = (credibleCount * -10) + (lowCredCount * 15);
+    // More aggressive reduction: each credible source is -15, capped at -50
+    let scoreAdjustment = (credibleCount * -15) + (lowCredCount * 15);
+    
+    // Extra bonus if multiple credible sources corroborate
+    if (credibleCount >= 3) scoreAdjustment -= 20;
 
     return {
       articles,
       credibleSourcesFound: credibleCount,
       topicVerified: credibleCount > 0,
-      scoreAdjustment,
+      scoreAdjustment: Math.max(-80, Math.min(80, scoreAdjustment)),
       status: 'found',
     };
   } catch (error: any) {

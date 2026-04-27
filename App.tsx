@@ -11,6 +11,7 @@ import AboutScreen from './screens/AboutScreen';
 import MetricsScreen from './screens/MetricsScreen';
 import ResultScreen from './screens/ResultScreen';
 import { RootStackParamList } from './types';
+import { ThemeProvider } from './context/ThemeContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -68,26 +69,28 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: 'white' },
-          headerTintColor: '#2F3542',
-          headerTitleStyle: { fontWeight: '900', fontSize: 16 },
-          headerShadowVisible: false,
-        }}
-      >
-        <Stack.Screen 
-          name="Main" 
-          component={MainTabs} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="Result" 
-          component={ResultScreen} 
-          options={{ title: 'ANALYSIS RESULT' }} 
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ThemeProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: { backgroundColor: 'white' },
+            headerTintColor: '#2F3542',
+            headerTitleStyle: { fontWeight: '900', fontSize: 16 },
+            headerShadowVisible: false,
+          }}
+        >
+          <Stack.Screen 
+            name="Main" 
+            component={MainTabs} 
+            options={{ headerShown: false }} 
+          />
+          <Stack.Screen 
+            name="Result" 
+            component={ResultScreen} 
+            options={{ title: 'ANALYSIS RESULT' }} 
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
