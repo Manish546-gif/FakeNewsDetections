@@ -64,6 +64,112 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ navigation, route }) => {
           <Text style={styles.verdictText}>{result.detailedVerdict}</Text>
         </View>
 
+        {/* LIVE NEWS CROSS-REFERENCE */}
+        {result.newsCheck?.articles && result.newsCheck.articles.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+               <MaterialCommunityIcons name="newspaper-variant-outline" size={24} color="#4285F4" />
+               <Text style={styles.sectionTitle}>Live News Matches</Text>
+            </View>
+            {result.newsCheck.articles.slice(0, 3).map((article, i) => (
+              <TouchableOpacity 
+                key={i} 
+                style={styles.newsCard} 
+                onPress={() => Linking.openURL(article.link)}
+              >
+                <View style={styles.newsHeader}>
+                   <Text style={styles.newsSource}>{article.source.toUpperCase()}</Text>
+                   <Text style={styles.newsDate}>{article.pubDate}</Text>
+                </View>
+                <Text style={styles.newsTitle} numberOfLines={2}>{article.title}</Text>
+                <Text style={styles.newsSnippet} numberOfLines={2}>{article.snippet}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* PROFESSIONAL FACT CHECKS */}
+        {result.factChecks && result.factChecks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+               <MaterialCommunityIcons name="shield-check-outline" size={24} color="#2ED573" />
+               <Text style={styles.sectionTitle}>Professional Fact Checks</Text>
+            </View>
+            {result.factChecks.map((fc, i) => (
+              <View key={i} style={styles.factCard}>
+                <View style={styles.factRatingRow}>
+                  <Text style={[styles.factRating, { color: fc.textualRating.toLowerCase().includes('false') ? '#FF4757' : '#2ED573' }]}>
+                    {fc.textualRating.toUpperCase()}
+                  </Text>
+                  <Text style={styles.factSource}>VIA {fc.claimant.toUpperCase()}</Text>
+                </View>
+                <Text style={styles.factClaim}>{fc.claim}</Text>
+                {fc.reviewUrl && (
+                  <TouchableOpacity onPress={() => Linking.openURL(fc.reviewUrl)}>
+                    <Text style={styles.readFullText}>READ FULL DEBUNK</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* LINK & DOMAIN INTELLIGENCE */}
+        {result.domainStats && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+               <MaterialCommunityIcons name="web" size={24} color="#4285F4" />
+               <Text style={styles.sectionTitle}>Link Intelligence</Text>
+            </View>
+            <View style={styles.intelligenceRow}>
+              <View style={styles.intelItem}>
+                <Text style={styles.intelLabel}>DOMAIN AGE</Text>
+                <Text style={[styles.intelValue, { color: result.domainStats.isNew ? '#FF4757' : '#2ED573' }]}>
+                  {result.domainStats.firstSeen}
+                </Text>
+              </View>
+              <View style={styles.intelItem}>
+                <Text style={styles.intelLabel}>REPUTATION</Text>
+                <Text style={[styles.intelValue, { color: result.domainStats.isNew ? '#FF4757' : '#2ED573' }]}>
+                  {result.domainStats.isNew ? 'RISKY / NEW' : 'ESTABLISHED'}
+                </Text>
+              </View>
+            </View>
+            {result.resolvedUrls && result.resolvedUrls.length > 0 && (
+              <Text style={styles.resolvedUrl}>REVEALED: {result.resolvedUrls[0]}</Text>
+            )}
+          </View>
+        )}
+
+        {/* ENTITY VERIFICATION (WIKI) */}
+        {result.wikiResult && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+               <MaterialCommunityIcons name="wikipedia" size={24} color="#2F3542" />
+               <Text style={styles.sectionTitle}>Contextual Verification</Text>
+            </View>
+            <View style={styles.wikiCard}>
+              <Text style={styles.wikiTitle}>{result.wikiResult.title}</Text>
+              <Text style={styles.wikiExtract} numberOfLines={3}>{result.wikiResult.extract}</Text>
+              <TouchableOpacity onPress={() => Linking.openURL(result.wikiResult.url)}>
+                <Text style={styles.wikiLink}>View Wikipedia Record</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* SOCIAL SIGNALS */}
+        {result.duplicateCount !== undefined && result.duplicateCount > 0 && (
+          <View style={styles.section}>
+            <View style={styles.alertCard}>
+              <MaterialCommunityIcons name="alert-decagram" size={20} color="#FF4757" />
+              <Text style={styles.alertText}>
+                This claim has been scanned {result.duplicateCount} times before. Potential coordinated misinformation signature detected.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* RED FLAG FINDINGS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -146,6 +252,58 @@ const styles = StyleSheet.create({
   issueText: { fontSize: 14, color: '#2F3542', fontWeight: '600', lineHeight: 20 },
   cleanRow: { backgroundColor: '#2ED57315', padding: 20, borderRadius: 20, alignItems: 'center', gap: 10 },
   cleanText: { fontSize: 14, color: '#2ED573', fontWeight: '800', textAlign: 'center' },
+  newsCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E8EDF3',
+    elevation: 2,
+  },
+  newsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  newsSource: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#4285F4',
+  },
+  newsDate: {
+    fontSize: 10,
+    color: '#A4B0BE',
+    fontWeight: '700',
+  },
+  newsTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#2F3542',
+    marginBottom: 4,
+  },
+  newsSnippet: {
+    fontSize: 12,
+    color: '#747D8C',
+    lineHeight: 18,
+  },
+  factCard: { backgroundColor: 'white', borderRadius: 20, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: '#2ED573', elevation: 2 },
+  factRatingRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  factRating: { fontSize: 11, fontWeight: '900' },
+  factSource: { fontSize: 10, color: '#A4B0BE', fontWeight: '800' },
+  factClaim: { fontSize: 13, color: '#2F3542', fontWeight: '600', lineHeight: 18, marginBottom: 8 },
+  readFullText: { fontSize: 11, color: '#4285F4', fontWeight: '800' },
+  intelligenceRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  intelItem: { flex: 1, backgroundColor: '#F1F2F6', padding: 12, borderRadius: 12 },
+  intelLabel: { fontSize: 9, color: '#A4B0BE', fontWeight: '800', marginBottom: 4 },
+  intelValue: { fontSize: 12, fontWeight: '900' },
+  resolvedUrl: { fontSize: 10, color: '#747D8C', fontStyle: 'italic', backgroundColor: '#F1F2F6', padding: 8, borderRadius: 8 },
+  wikiCard: { backgroundColor: '#F8F9FA', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#E8EDF3' },
+  wikiTitle: { fontSize: 15, fontWeight: '900', color: '#2F3542', marginBottom: 6 },
+  wikiExtract: { fontSize: 12, color: '#747D8C', lineHeight: 18, marginBottom: 10 },
+  wikiLink: { fontSize: 12, color: '#4285F4', fontWeight: '700' },
+  alertCard: { backgroundColor: '#FF475715', padding: 16, borderRadius: 16, flexDirection: 'row', gap: 12, alignItems: 'center' },
+  alertText: { flex: 1, fontSize: 12, color: '#FF4757', fontWeight: '700', lineHeight: 16 },
   verifyBtn: { backgroundColor: 'white', borderRadius: 16, padding: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 24, borderWidth: 1.5, borderColor: '#4285F420' },
   googleIconBg: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#4285F4', justifyContent: 'center', alignItems: 'center' },
   btnContent: { flex: 1, marginLeft: 16 },

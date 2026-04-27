@@ -8,6 +8,16 @@ export interface AnalysisResult {
   summary: string;
   urls: string[];
   detailedVerdict: string;
+  newsCheck?: {
+    articles: any[];
+    topicVerified: boolean;
+    status: string;
+  };
+  factChecks?: any[];
+  wikiResult?: any;
+  domainStats?: any;
+  duplicateCount?: number;
+  resolvedUrls?: string[];
 }
 
 export type RootStackParamList = {

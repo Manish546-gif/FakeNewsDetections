@@ -14,6 +14,14 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { analyzeMessage } from '../utils/analyzeMessage';
+import { checkCurrentNews } from '../utils/newsChecker';
+import { 
+  fetchFactCheck, 
+  wikipediaLookup, 
+  getDomainAge, 
+  expandUrl, 
+  checkDuplicates 
+} from '../utils/tier1Utils';
 import { getHistory, saveToHistory, HistoryItem } from '../utils/history';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -36,12 +44,60 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
     setLoading(true);
-    setTimeout(async () => {
+    try {
+      // 1. Run local AI analysis
       const result = analyzeMessage(message);
+      
+      // 2. Run live news cross-reference (parallel)
+      const newsResult = await checkCurrentNews(message);
+      
+      // 3. Calibrate score based on live news findings
+      if (newsResult.status === 'found') {
+        result.riskScore = Math.max(0, Math.min(100, result.riskScore + newsResult.scoreAdjustment));
+        result.newsCheck = {
+          articles: newsResult.articles,
+          topicVerified: newsResult.topicVerified,
+          status: newsResult.status
+        };
+      }
+
+      // 4. Run Tier 1 Verifications
+      const duplicates = await checkDuplicates(message);
+      result.duplicateCount = duplicates;
+
+      // Extract entities (simplified: capitalized words)
+      const entities = message.match(/[A-Z][a-z]+/g) || [];
+      if (entities.length > 0) {
+        const wiki = await wikipediaLookup(entities[0]);
+        if (wiki) result.wikiResult = wiki;
+      }
+
+      // Fact Check Lookup
+      const factChecks = await fetchFactCheck(message.substring(0, 100));
+      if (factChecks.length > 0) {
+        result.factChecks = factChecks;
+        // Significant risk increase if "False" or "Fake" is in a fact check rating
+        const isDebunked = factChecks.some(fc => /false|fake|misleading|incorrect/i.test(fc.textualRating));
+        if (isDebunked) result.riskScore = Math.min(100, result.riskScore + 30);
+      }
+
+      // URL Intelligence
+      if (result.urls.length > 0) {
+        const expanded = await expandUrl(result.urls[0]);
+        const domain = expanded.split('/')[2];
+        const age = await getDomainAge(domain);
+        result.domainStats = age;
+        result.resolvedUrls = [expanded];
+        if (age?.isNew) result.riskScore = Math.min(100, result.riskScore + 20);
+      }
+
       await saveToHistory(message, result);
       setLoading(false);
       navigation.navigate('Result', { result, message });
-    }, 1200);
+    } catch (err) {
+      setLoading(false);
+      setError('Analysis failed. Please try again.');
+    }
   };
 
   const handlePaste = async () => {
